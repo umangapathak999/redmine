@@ -1,0 +1,39 @@
+services:
+  redmine-db:
+    image: postgres:16
+    container_name: redmine-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - redmine-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redmine:
+    image: redmine:6.0
+    container_name: redmine
+    restart: unless-stopped
+    ports:
+      - "${REDMINE_PORT}:3000"
+    environment:
+      REDMINE_DB_POSTGRES: redmine-db
+      REDMINE_DB_DATABASE: ${POSTGRES_DB}
+      REDMINE_DB_USERNAME: ${POSTGRES_USER}
+      REDMINE_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDMINE_SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE}
+    volumes:
+      - ./files:/usr/src/redmine/files
+      - ./plugins:/usr/src/redmine/plugins
+      - ./themes:/usr/src/redmine/themes
+    depends_on:
+      redmine-db:
+        condition: service_healthy
+
+volumes:
+  redmine-db-data:
